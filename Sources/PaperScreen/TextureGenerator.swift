@@ -32,7 +32,7 @@ enum TextureGenerator {
         case .blotter:
             field = blotter(n, &rng); strength = 0.4
         case .coldTooth:
-            field = coldTooth(n, &rng); strength = 0.95
+            field = coldTooth(n, &rng); strength = 0.2
         }
         return image(from: field, n: n, strength: strength)
     }
