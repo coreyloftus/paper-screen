@@ -41,18 +41,20 @@ final class OverlayController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(screensChanged),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        let workspace = NSWorkspace.shared.notificationCenter
-        workspace.addObserver(self, selector: #selector(appsChanged(_:)), name: NSWorkspace.didLaunchApplicationNotification, object: nil)
-        workspace.addObserver(self, selector: #selector(appsChanged(_:)), name: NSWorkspace.didTerminateApplicationNotification, object: nil)
-        screenshotToolRunning = !NSRunningApplication.runningApplications(withBundleIdentifier: Self.screenshotToolID).isEmpty
+        screenshotToolRunning = Self.isScreenshotToolRunning()
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in self?.pollScreenshotTool() }
     }
 
     @objc private func screensChanged() { refresh() }
 
-    @objc private func appsChanged(_ note: Notification) {
-        let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-        guard app?.bundleIdentifier == Self.screenshotToolID else { return }
-        screenshotToolRunning = note.name == NSWorkspace.didLaunchApplicationNotification
+    private static func isScreenshotToolRunning() -> Bool {
+        !NSRunningApplication.runningApplications(withBundleIdentifier: screenshotToolID).isEmpty
+    }
+
+    private func pollScreenshotTool() {
+        let running = Self.isScreenshotToolRunning()
+        guard running != screenshotToolRunning else { return }
+        screenshotToolRunning = running
         refresh()
     }
 
@@ -83,7 +85,6 @@ final class OverlayController {
         window.backgroundColor = .clear
         window.hasShadow = false
         window.ignoresMouseEvents = true
-        window.sharingType = .none
         window.isReleasedWhenClosed = false
         window.level = .screenSaver
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
