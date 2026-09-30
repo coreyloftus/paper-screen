@@ -30,7 +30,7 @@ A page icon appears in the menu bar. Click it for the controls. Quit from the sa
 Launch arguments override saved settings for one run, for example:
 
 ```sh
-open build/PaperScreen.app --args -enabled YES -intensity 0.3 -texture woven
+open build/PaperScreen.app --args -enabled YES -intensity 0.4 -texture woven
 ```
 
-Textures: `softGrain`, `woven`, `blotter`, `coldTooth`.
+`-intensity` runs 0 to 1 (window opacity 2% to 30%, steeper at the top). Textures: `softGrain`, `woven`, `blotter`, `coldTooth`.
