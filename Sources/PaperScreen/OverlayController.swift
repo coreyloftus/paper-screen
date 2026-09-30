@@ -6,9 +6,10 @@ private final class OverlayWindow: NSWindow {
     override var canBecomeMain: Bool { false }
 }
 
-private final class OverlayView: NSView {
-    var veil = NSColor.white { didSet { needsDisplay = true } }
+final class OverlayView: NSView {
+    var veil = NSColor.clear { didSet { needsDisplay = true } }
     var tile: NSImage? { didSet { needsDisplay = true } }
+    var grainOpacity: CGFloat = 1 { didSet { needsDisplay = true } }
 
     override var isOpaque: Bool { false }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
@@ -16,9 +17,12 @@ private final class OverlayView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         veil.setFill()
         dirtyRect.fill(using: .sourceOver)
-        if let tile {
+        if let tile, let context = NSGraphicsContext.current?.cgContext {
+            context.saveGState()
+            context.setAlpha(grainOpacity)
             NSColor(patternImage: tile).setFill()
             dirtyRect.fill(using: .sourceOver)
+            context.restoreGState()
         }
     }
 }
@@ -96,23 +100,24 @@ final class OverlayController {
         // one texture pixel per screen pixel, so Retina displays get the same grain size
         let points = CGFloat(cg.width) / scale
         view.tile = NSImage(cgImage: cg, size: NSSize(width: points, height: points))
-        view.veil = Self.veilColor(warmth: settings.warmth)
-        window.alphaValue = Self.opacity(forIntensity: settings.intensity)
+        view.veil = Self.veilColor(warmth: settings.warmth, level: settings.veil)
+        view.grainOpacity = Self.grainOpacity(forIntensity: settings.intensity)
     }
 
-    /// Window opacity 2%...30%. The curve is quadratic, so the low end (where paper looks best) gets finer steps.
-    static func opacity(forIntensity intensity: Double) -> CGFloat {
-        CGFloat(0.02 + 0.28 * intensity * intensity)
+    /// Grain opacity 2%...50%. The curve is quadratic, so the low end gets finer steps.
+    static func grainOpacity(forIntensity intensity: Double) -> CGFloat {
+        CGFloat(0.02 + 0.48 * intensity * intensity)
     }
 
-    /// Neutral paper white at warmth 0, amber paper at warmth 1.
-    private static func veilColor(warmth: Double) -> NSColor {
+    /// A mid-tone veil flattens contrast without lifting overall brightness: bright areas dim, dark areas lift.
+    /// Grey at warmth 0, amber-brown at warmth 1. Veil opacity is 0...50%.
+    static func veilColor(warmth: Double, level: Double) -> NSColor {
         let w = CGFloat(warmth)
         return NSColor(
-            srgbRed: 0.96 + (1.0 - 0.96) * w,
-            green: 0.95 + (0.80 - 0.95) * w,
-            blue: 0.92 + (0.50 - 0.92) * w,
-            alpha: 0.85)
+            srgbRed: 0.55 + (0.65 - 0.55) * w,
+            green: 0.55 + (0.50 - 0.55) * w,
+            blue: 0.55 + (0.32 - 0.55) * w,
+            alpha: CGFloat(0.5 * level))
     }
 
     private static func displayID(_ screen: NSScreen) -> CGDirectDisplayID? {
