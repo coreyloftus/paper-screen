@@ -83,6 +83,7 @@ final class OverlayController {
         window.backgroundColor = .clear
         window.hasShadow = false
         window.ignoresMouseEvents = true
+        window.sharingType = .none
         window.isReleasedWhenClosed = false
         window.level = .screenSaver
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
