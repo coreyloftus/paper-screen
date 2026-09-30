@@ -26,13 +26,13 @@ enum TextureGenerator {
         let strength: Float
         switch texture {
         case .softGrain:
-            field = softGrain(n, &rng); strength = 0.35
+            field = softGrain(n, &rng); strength = 0.5
         case .woven:
-            field = woven(n, &rng); strength = 0.4
+            field = woven(n, &rng); strength = 0.55
         case .blotter:
-            field = blotter(n, &rng); strength = 0.4
+            field = blotter(n, &rng); strength = 0.55
         case .coldTooth:
-            field = coldTooth(n, &rng); strength = 0.2
+            field = coldTooth(n, &rng); strength = 0.3
         }
         return image(from: field, n: n, strength: strength)
     }

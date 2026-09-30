@@ -9,6 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var textureItems: [PaperTexture: NSMenuItem] = [:]
     private var intensitySlider: NSSlider!
     private var warmthSlider: NSSlider!
+    private var veilSlider: NSSlider!
+    private var veilLabel: NSTextField!
     private var intensityLabel: NSTextField!
     private var warmthLabel: NSTextField!
     private var hotKey: HotKey?
@@ -37,7 +39,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for (texture, item) in textureItems { item.state = texture == settings.texture ? .on : .off }
         intensitySlider.doubleValue = settings.intensity
         warmthSlider.doubleValue = settings.warmth
-        intensityLabel.stringValue = "Intensity  \(Int((settings.intensity * 100).rounded()))%"
+        veilSlider.doubleValue = settings.veil
+        intensityLabel.stringValue = "Grain  \(Int((settings.intensity * 100).rounded()))%"
+        veilLabel.stringValue = "Veil  \(Int((settings.veil * 100).rounded()))%"
         warmthLabel.stringValue = "Warmth  \(Int((settings.warmth * 100).rounded()))%"
         let symbol = settings.enabled ? "doc.text.fill" : "doc.text"
         statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Paper overlay")
@@ -58,6 +62,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                    target: self, action: #selector(intensityChanged(_:)))
         intensityLabel = NSTextField(labelWithString: "")
         menu.addItem(sliderItem(label: intensityLabel, slider: intensitySlider))
+
+        veilSlider = NSSlider(value: settings.veil, minValue: 0, maxValue: 1,
+                              target: self, action: #selector(veilChanged(_:)))
+        veilLabel = NSTextField(labelWithString: "")
+        menu.addItem(sliderItem(label: veilLabel, slider: veilSlider))
 
         warmthSlider = NSSlider(value: settings.warmth, minValue: 0, maxValue: 1,
                                 target: self, action: #selector(warmthChanged(_:)))
@@ -95,6 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleFromMenu() { toggle() }
     @objc private func intensityChanged(_ sender: NSSlider) { settings.intensity = sender.doubleValue }
+    @objc private func veilChanged(_ sender: NSSlider) { settings.veil = sender.doubleValue }
     @objc private func warmthChanged(_ sender: NSSlider) { settings.warmth = sender.doubleValue }
 
     @objc private func textureChosen(_ sender: NSMenuItem) {
