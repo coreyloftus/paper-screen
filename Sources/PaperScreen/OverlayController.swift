@@ -29,16 +29,31 @@ final class OverlayController {
     private var tileCache: [PaperTexture: CGImage] = [:]
     private let settings = Settings.shared
 
+    /// The system screenshot tool treats our full-screen window as the window to capture, so we hide while it runs.
+    private static let screenshotToolID = "com.apple.screencaptureui"
+    private var screenshotToolRunning = false
+
     init() {
         NotificationCenter.default.addObserver(
             self, selector: #selector(screensChanged),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        let workspace = NSWorkspace.shared.notificationCenter
+        workspace.addObserver(self, selector: #selector(appsChanged(_:)), name: NSWorkspace.didLaunchApplicationNotification, object: nil)
+        workspace.addObserver(self, selector: #selector(appsChanged(_:)), name: NSWorkspace.didTerminateApplicationNotification, object: nil)
+        screenshotToolRunning = !NSRunningApplication.runningApplications(withBundleIdentifier: Self.screenshotToolID).isEmpty
     }
 
     @objc private func screensChanged() { refresh() }
 
+    @objc private func appsChanged(_ note: Notification) {
+        let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+        guard app?.bundleIdentifier == Self.screenshotToolID else { return }
+        screenshotToolRunning = note.name == NSWorkspace.didLaunchApplicationNotification
+        refresh()
+    }
+
     func refresh() {
-        guard settings.enabled else {
+        guard settings.enabled, !screenshotToolRunning else {
             windows.values.forEach { $0.orderOut(nil) }
             return
         }
@@ -82,7 +97,12 @@ final class OverlayController {
         let points = CGFloat(cg.width) / scale
         view.tile = NSImage(cgImage: cg, size: NSSize(width: points, height: points))
         view.veil = Self.veilColor(warmth: settings.warmth)
-        window.alphaValue = CGFloat(settings.intensity)
+        window.alphaValue = Self.opacity(forIntensity: settings.intensity)
+    }
+
+    /// Window opacity 2%...30%. The curve is quadratic, so the low end (where paper looks best) gets finer steps.
+    static func opacity(forIntensity intensity: Double) -> CGFloat {
+        CGFloat(0.02 + 0.28 * intensity * intensity)
     }
 
     /// Neutral paper white at warmth 0, amber paper at warmth 1.
