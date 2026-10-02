@@ -25,6 +25,14 @@ A macOS menu bar utility that lays a soft paper texture over every display, to c
 open build/PaperScreen.app
 ```
 
+To install it in `/Applications` (so Spotlight and Raycast can launch it):
+
+```sh
+./install.sh
+```
+
+Re-run it to update. `scripts/make-icon.swift` redraws `Resources/AppIcon.icns`.
+
 A page icon appears in the menu bar. Click it for the controls. Quit from the same menu.
 
 Launch arguments override saved settings for one run, for example:
