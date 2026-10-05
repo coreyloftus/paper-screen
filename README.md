@@ -2,6 +2,8 @@
 
 A macOS menu bar utility that lays a soft paper texture over every display, to cut glare and harsh contrast. Our own implementation; see `NOTES.md` for the research that shaped the feature list.
 
+![PaperScreen: the same page with the overlay off (left) and on (right)](docs/screenshot.png)
+
 ## Plan
 
 **Stack:** native Swift + AppKit, built with SwiftPM (no Xcode needed, Command Line Tools are enough). Apple Silicon, macOS 13+. Windows comes later as a separate port.
