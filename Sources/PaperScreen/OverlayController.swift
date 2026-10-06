@@ -33,33 +33,16 @@ final class OverlayController {
     private var tileCache: [PaperTexture: CGImage] = [:]
     private let settings = Settings.shared
 
-    /// The system screenshot tool treats our full-screen window as the window to capture, so we hide while it runs.
-    private static let screenshotToolID = "com.apple.screencaptureui"
-    private var screenshotToolRunning = false
-
     init() {
         NotificationCenter.default.addObserver(
             self, selector: #selector(screensChanged),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        screenshotToolRunning = Self.isScreenshotToolRunning()
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in self?.pollScreenshotTool() }
     }
 
     @objc private func screensChanged() { refresh() }
 
-    private static func isScreenshotToolRunning() -> Bool {
-        !NSRunningApplication.runningApplications(withBundleIdentifier: screenshotToolID).isEmpty
-    }
-
-    private func pollScreenshotTool() {
-        let running = Self.isScreenshotToolRunning()
-        guard running != screenshotToolRunning else { return }
-        screenshotToolRunning = running
-        refresh()
-    }
-
     func refresh() {
-        guard settings.enabled, !screenshotToolRunning else {
+        guard settings.enabled else {
             windows.values.forEach { $0.orderOut(nil) }
             return
         }
@@ -85,6 +68,7 @@ final class OverlayController {
         window.backgroundColor = .clear
         window.hasShadow = false
         window.ignoresMouseEvents = true
+        window.sharingType = .none
         window.isReleasedWhenClosed = false
         window.level = .screenSaver
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
