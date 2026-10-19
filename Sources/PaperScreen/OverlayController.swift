@@ -35,24 +35,29 @@ final class OverlayController {
 
     /// The system screenshot tool treats our full-screen window as the window to capture, so we hide while it runs.
     private static let screenshotToolID = "com.apple.screencaptureui"
+    private static let screenshotToolStaleAfter: TimeInterval = 60
     private var screenshotToolRunning = false
+    private var screenshotToolSeen: [pid_t: Date] = [:]
 
     init() {
         NotificationCenter.default.addObserver(
             self, selector: #selector(screensChanged),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        screenshotToolRunning = Self.isScreenshotToolRunning()
+        screenshotToolRunning = isScreenshotToolRunning()
         Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in self?.pollScreenshotTool() }
     }
 
     @objc private func screensChanged() { refresh() }
 
-    private static func isScreenshotToolRunning() -> Bool {
-        !NSRunningApplication.runningApplications(withBundleIdentifier: screenshotToolID).isEmpty
+    private func isScreenshotToolRunning() -> Bool {
+        let pids = Set(NSRunningApplication.runningApplications(withBundleIdentifier: Self.screenshotToolID).map(\.processIdentifier))
+        screenshotToolSeen = screenshotToolSeen.filter { pids.contains($0.key) }
+        for pid in pids where screenshotToolSeen[pid] == nil { screenshotToolSeen[pid] = Date() }
+        return screenshotToolSeen.values.contains { -$0.timeIntervalSinceNow < Self.screenshotToolStaleAfter }
     }
 
     private func pollScreenshotTool() {
-        let running = Self.isScreenshotToolRunning()
+        let running = isScreenshotToolRunning()
         guard running != screenshotToolRunning else { return }
         screenshotToolRunning = running
         refresh()
