@@ -33,38 +33,36 @@ final class OverlayController {
     private var tileCache: [PaperTexture: CGImage] = [:]
     private let settings = Settings.shared
 
-    /// The system screenshot tool treats our full-screen window as the window to capture, so we hide while it runs.
+    /// The system screenshot tool treats our full-screen window as the window to capture, so we hide while its capture window is on screen.
     private static let screenshotToolID = "com.apple.screencaptureui"
-    private static let screenshotToolStaleAfter: TimeInterval = 60
-    private var screenshotToolRunning = false
-    private var screenshotToolSeen: [pid_t: Date] = [:]
+    private var screenshotToolShowing = false
 
     init() {
         NotificationCenter.default.addObserver(
             self, selector: #selector(screensChanged),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        screenshotToolRunning = isScreenshotToolRunning()
+        screenshotToolShowing = isScreenshotToolShowing()
         Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in self?.pollScreenshotTool() }
     }
 
     @objc private func screensChanged() { refresh() }
 
-    private func isScreenshotToolRunning() -> Bool {
+    private func isScreenshotToolShowing() -> Bool {
         let pids = Set(NSRunningApplication.runningApplications(withBundleIdentifier: Self.screenshotToolID).map(\.processIdentifier))
-        screenshotToolSeen = screenshotToolSeen.filter { pids.contains($0.key) }
-        for pid in pids where screenshotToolSeen[pid] == nil { screenshotToolSeen[pid] = Date() }
-        return screenshotToolSeen.values.contains { -$0.timeIntervalSinceNow < Self.screenshotToolStaleAfter }
+        guard !pids.isEmpty else { return false }
+        let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+        return windows.contains { pids.contains(($0[kCGWindowOwnerPID as String] as? pid_t) ?? 0) }
     }
 
     private func pollScreenshotTool() {
-        let running = isScreenshotToolRunning()
-        guard running != screenshotToolRunning else { return }
-        screenshotToolRunning = running
+        let showing = isScreenshotToolShowing()
+        guard showing != screenshotToolShowing else { return }
+        screenshotToolShowing = showing
         refresh()
     }
 
     func refresh() {
-        guard settings.enabled, !screenshotToolRunning else {
+        guard settings.enabled, !screenshotToolShowing else {
             windows.values.forEach { $0.orderOut(nil) }
             return
         }
