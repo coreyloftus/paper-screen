@@ -33,9 +33,11 @@ final class OverlayController {
     private var tileCache: [PaperTexture: CGImage] = [:]
     private let settings = Settings.shared
 
-    /// The system screenshot tool treats our full-screen window as the window to capture, so we hide while its capture window is on screen.
+    /// The system screenshot tool treats our full-screen window as the window to capture, so we hide for its first 2 seconds and while its capture window is on screen.
     private static let screenshotToolID = "com.apple.screencaptureui"
+    private static let screenshotToolStartupGrace: TimeInterval = 2
     private var screenshotToolShowing = false
+    private var screenshotToolSeen: [pid_t: Date] = [:]
 
     init() {
         NotificationCenter.default.addObserver(
@@ -49,7 +51,11 @@ final class OverlayController {
 
     private func isScreenshotToolShowing() -> Bool {
         let pids = Set(NSRunningApplication.runningApplications(withBundleIdentifier: Self.screenshotToolID).map(\.processIdentifier))
+        screenshotToolSeen = screenshotToolSeen.filter { pids.contains($0.key) }
+        for pid in pids where screenshotToolSeen[pid] == nil { screenshotToolSeen[pid] = Date() }
         guard !pids.isEmpty else { return false }
+        // its window appears about 0.5s after launch, and some capture modes show none
+        if screenshotToolSeen.values.contains(where: { -$0.timeIntervalSinceNow < Self.screenshotToolStartupGrace }) { return true }
         let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
         return windows.contains { pids.contains(($0[kCGWindowOwnerPID as String] as? pid_t) ?? 0) }
     }
